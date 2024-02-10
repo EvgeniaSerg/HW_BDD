@@ -2,6 +2,7 @@ package ru.netology.web.test;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import ru.netology.web.data.DataHelper;
 import ru.netology.web.page.DashboardPage;
 import ru.netology.web.page.LoginPage;
 
@@ -12,8 +13,8 @@ import static ru.netology.web.data.DataHelper.*;
 
 public class MoneyTransferTest {
     DashboardPage dashboardPage;
-    CardInfo firstCardInfo;
-    CardInfo secondCardInfo;
+    DataHelper.CardInfo firstCardInfo;
+    DataHelper.CardInfo secondCardInfo;
     int firstCardBalance;
     int secondCardBalance;
 
@@ -23,16 +24,17 @@ public class MoneyTransferTest {
         var loginPage = new LoginPage();
         var authInfo = getAuthInfo();
         var verificationPage = loginPage.validLogin(authInfo);
-        var verificationCode = getVerificationCode(authInfo);
+        var verificationCode = getVerificationCodeFor(authInfo);
         dashboardPage = verificationPage.validVerify(verificationCode);
-        firstCardInfo = getFirstCardInfo();
+        firstCardInfo = getFisrtCardInfo();
         secondCardInfo = getSecondCardInfo();
         firstCardBalance = dashboardPage.getCardBalance(firstCardInfo);
         secondCardBalance = dashboardPage.getCardBalance(secondCardInfo);
+
     }
 
     @Test
-    void transferMoneyFromFirstToSecond() {
+    void transferMoneyFromFirstCardToSecondCard() {
         var amount = generateValidAmount(firstCardBalance);
         var expectedBalanceFirstCard = firstCardBalance - amount;
         var expectedBalanceSecondCard = secondCardBalance + amount;
@@ -44,4 +46,19 @@ public class MoneyTransferTest {
         assertAll(() -> assertEquals(expectedBalanceFirstCard, actualBalanceFirstCard),
                 () -> assertEquals(expectedBalanceSecondCard, actualBalanceSecondCard));
     }
+
+    @Test
+    void transferMoneyFromSecondCardToFirstCard() {
+        var amount = generateInvalidAmount(secondCardBalance);
+        var transferPage = dashboardPage.selectCardToTransfer(firstCardInfo);
+        transferPage.makeTransfer(String.valueOf(amount), secondCardInfo);
+        transferPage.findErrorMessage("Выполнена попытка перевода суммы, превышающей остаток на карте списания");
+        var actualBalanceFirstCard = dashboardPage.getCardBalance(firstCardInfo);
+        var actualBalanceSecondCard = dashboardPage.getCardBalance(secondCardInfo);
+        assertAll(() -> transferPage.findErrorMessage("Выполнена попытка перевода суммы, превышающей остаток на карте списания"),
+                () -> assertEquals(firstCardBalance, actualBalanceFirstCard),
+                () -> assertEquals(secondCardBalance, actualBalanceSecondCard));
+
+    }
+
 }
